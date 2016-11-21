@@ -2,6 +2,7 @@ import re
 
 from .message import Request
 from .util import normalize_line_endings
+from .base64 import b64encode
 
 try:
     # Python 3
@@ -176,12 +177,14 @@ class RequestParser:
         # Copy from the parsed URI.
         if uri.scheme:
             self.request.protocol = uri.scheme
-        if uri.netloc:
-            # Sometimes urlparse leave the port in the netloc.
-            if ":" in uri.netloc:
-                (self.request.host, self.request.port) = uri.netloc.split(":")
-            else:
-                self.request.host = uri.netloc
+        if uri.host:
+            self.request.host = uri.host
+        if uri.username or uri.password:
+            # Automatically change http://user:password@.../ into an Authorization header.
+            digest = base64.b64encode("{}:{}".format(url.username,url.password))
+            # Add a header with the authentication information
+            digest_header = "Authorization: Basic {}".format(digest)
+            self.request.headers.append(header)
         if uri.port:
             self.request.port = uri.port
         if uri.path:
